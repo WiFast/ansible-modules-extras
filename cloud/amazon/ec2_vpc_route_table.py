@@ -323,7 +323,7 @@ def ensure_routes(vpc_conn, route_table, route_specs, propagating_vgw_ids,
     # VGWs in place.
     routes_to_delete = []
     for r in routes_to_match:
-        if r.gateway_id != 'local' and not r.gateway_id.startswith('vpce-'):
+        if r.gateway_id and r.gateway_id != 'local' and not r.gateway_id.startswith('vpce-'):
             if not propagating_vgw_ids or r.gateway_id not in propagating_vgw_ids:
                 routes_to_delete.append(r)
 
