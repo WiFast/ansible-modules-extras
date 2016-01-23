@@ -293,9 +293,9 @@ def route_spec_matches_route(route_spec, route):
     # route for another nat gateway in this route table there is not a way to
     # change to another nat gateway id. Long term solution would be to utilise
     # boto3 which is a very big task for this module or to update boto.
-    if 'nat-' in route_spec['gateway_id']:
+    if route_spec.get('gateway_id') and 'nat-' in route_spec['gateway_id']:
         if route.destination_cidr_block == route_spec['destination_cidr_block']:
-            if not all((route.gateway_id, route.instance_id, route.interface_id, route.vpc_peering_connection_id)):
+            if all((not route.gateway_id, not route.instance_id, not route.interface_id, not route.vpc_peering_connection_id)):
                 return True
 
     for k in key_attr_map.iterkeys():
@@ -335,13 +335,15 @@ def ensure_routes(vpc_conn, route_table, route_specs, propagating_vgw_ids,
     # VGWs in place.
     routes_to_delete = []
     for r in routes_to_match:
-        if r.gateway_id and r.gateway_id != 'local' and not r.gateway_id.startswith('vpce-'):
-            if not propagating_vgw_ids or r.gateway_id not in propagating_vgw_ids:
-                routes_to_delete.append(r)
+        if r.gateway_id:
+            if r.gateway_id != 'local' and not r.gateway_id.startswith('vpce-'):
+                if not propagating_vgw_ids or r.gateway_id not in propagating_vgw_ids:
+                    routes_to_delete.append(r)
+        else:
+            routes_to_delete.append(r)
 
-    changed = routes_to_delete or route_specs_to_create
+    changed = bool(routes_to_delete or route_specs_to_create)
     if changed:
-        changed = True
         for route_spec in route_specs_to_create:
             try:
                 vpc_conn.create_route(route_table.id,
