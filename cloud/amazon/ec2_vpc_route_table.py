@@ -286,6 +286,18 @@ def route_spec_matches_route(route_spec, route):
         'interface_id': 'interface_id',
         'vpc_peering_connection_id': 'vpc_peering_connection_id',
     }
+
+    # This is a workaround to catch managed NAT gateways as they do not show
+    # up in any of the returned values when describing route tables.
+    # The caveat of doing it this way is that if there was an existing
+    # route for another nat gateway in this route table there is not a way to
+    # change to another nat gateway id. Long term solution would be to utilise
+    # boto3 which is a very big task for this module or to update boto.
+    if 'nat-' in route_spec['gateway_id']:
+        if route.destination_cidr_block == route_spec['destination_cidr_block']:
+            if not all((route.gateway_id, route.instance_id, route.interface_id, route.vpc_peering_connection_id)):
+                return True
+
     for k in key_attr_map.iterkeys():
         if k in route_spec:
             if route_spec[k] != getattr(route, k):
