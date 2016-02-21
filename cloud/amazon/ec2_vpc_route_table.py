@@ -344,20 +344,20 @@ def ensure_routes(vpc_conn, route_table, route_specs, propagating_vgw_ids,
 
     changed = bool(routes_to_delete or route_specs_to_create)
     if changed:
-        for route_spec in route_specs_to_create:
-            try:
-                vpc_conn.create_route(route_table.id,
-                                      dry_run=check_mode,
-                                      **route_spec)
-            except EC2ResponseError as e:
-                if e.error_code == 'DryRunOperation':
-                    pass
-
         for route in routes_to_delete:
             try:
                 vpc_conn.delete_route(route_table.id,
                                       route.destination_cidr_block,
                                       dry_run=check_mode)
+            except EC2ResponseError as e:
+                if e.error_code == 'DryRunOperation':
+                    pass
+
+        for route_spec in route_specs_to_create:
+            try:
+                vpc_conn.create_route(route_table.id,
+                                      dry_run=check_mode,
+                                      **route_spec)
             except EC2ResponseError as e:
                 if e.error_code == 'DryRunOperation':
                     pass
