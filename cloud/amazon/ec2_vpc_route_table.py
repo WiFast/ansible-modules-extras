@@ -45,8 +45,8 @@ options:
   append_routes:
     description:
       - If set to true, routes will not be deleted from the route table; only specified routes that are missing will be created.
-      required: false
-      default: false
+    required: false
+    default: false
   state:
     description:
       - "Create or destroy the VPC route table"
