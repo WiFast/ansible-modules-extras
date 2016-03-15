@@ -43,6 +43,7 @@ options:
       - "List of routes in the route table. Routes are specified as dicts containing the keys 'dest' and one of 'gateway_id', 'instance_id', 'interface_id', or 'vpc_peering_connection_id'. If 'gateway_id' is specified, you can refer to the VPC's IGW by using the value 'igw'."
     required: true
   append_routes:
+    version_added: "2.1"
     description:
       - If set to true, routes will not be deleted from the route table; only specified routes that are missing will be created.
     required: false
