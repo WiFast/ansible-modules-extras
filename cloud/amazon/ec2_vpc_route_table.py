@@ -40,12 +40,14 @@ options:
     default: null
   routes:
     description:
-      - "List of routes in the route table.
-        Routes are specified as dicts containing the keys 'dest' and one of 'gateway_id',
-        'instance_id', 'interface_id', or 'vpc_peering_connection_id'.
-        If 'gateway_id' is specified, you can refer to the VPC's IGW by using the value 'igw'. Routes are required for present states."
+      - "List of routes in the route table. Routes are specified as dicts containing the keys 'dest' and one of 'gateway_id', 'instance_id', 'interface_id', or 'vpc_peering_connection_id'. If 'gateway_id' is specified, you can refer to the VPC's IGW by using the value 'igw'. Routes are required for present states."
+    required: true
+  append_routes:
+    version_added: "2.1"
+    description:
+      - If set to true, routes will not be deleted from the route table; only specified routes that are missing will be created.
     required: false
-    default: None
+    default: false
   state:
     description:
       - "Create or destroy the VPC route table"
@@ -317,7 +319,7 @@ def index_of_matching_route(route_spec, routes_to_match):
 
 
 def ensure_routes(vpc_conn, route_table, route_specs, propagating_vgw_ids,
-                  check_mode):
+                  check_mode, append_only):
     routes_to_match = list(route_table.routes)
     route_specs_to_create = []
     for route_spec in route_specs:
@@ -334,13 +336,14 @@ def ensure_routes(vpc_conn, route_table, route_specs, propagating_vgw_ids,
     # The current logic will leave non-propagated routes using propagating
     # VGWs in place.
     routes_to_delete = []
-    for r in routes_to_match:
-        if r.gateway_id:
-            if r.gateway_id != 'local' and not r.gateway_id.startswith('vpce-'):
-                if not propagating_vgw_ids or r.gateway_id not in propagating_vgw_ids:
-                    routes_to_delete.append(r)
-        else:
-            routes_to_delete.append(r)
+    if not append_only:
+        for r in routes_to_match:
+            if r.gateway_id:
+                if r.gateway_id != 'local' and not r.gateway_id.startswith('vpce-'):
+                    if not propagating_vgw_ids or r.gateway_id not in propagating_vgw_ids:
+                        routes_to_delete.append(r)
+            else:
+                routes_to_delete.append(r)
 
     changed = bool(routes_to_delete or route_specs_to_create)
     if changed:
@@ -502,6 +505,7 @@ def create_route_spec(connection, module, vpc_id):
 
 def ensure_route_table_present(connection, module):
 
+    append_routes = module.params.get('append_routes')
     lookup = module.params.get('lookup')
     propagating_vgw_ids = module.params.get('propagating_vgw_ids')
     route_table_id = module.params.get('route_table_id')
@@ -545,7 +549,7 @@ def ensure_route_table_present(connection, module):
 
     if routes is not None:
         try:
-            result = ensure_routes(connection, route_table, routes, propagating_vgw_ids, module.check_mode)
+            result = ensure_routes(connection, route_table, routes, propagating_vgw_ids, module.check_mode, append_only=append_routes)
             changed = changed or result['changed']
         except EC2ResponseError as e:
             module.fail_json(msg=e.message)
@@ -587,6 +591,7 @@ def main():
     argument_spec = ec2_argument_spec()
     argument_spec.update(
         dict(
+            append_routes = dict(default=False, type='bool', required=False),
             lookup = dict(default='tag', required=False, choices=['tag', 'id']),
             propagating_vgw_ids = dict(default=None, required=False, type='list'),
             route_table_id = dict(default=None, required=False),
