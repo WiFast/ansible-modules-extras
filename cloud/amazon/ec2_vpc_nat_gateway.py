@@ -221,18 +221,6 @@ def ensure_nat_gateway_absent(ec2_client=None, module=None):
 
 def ensure_nat_gateway_present(ec2_client=None, module=None):
     """ Ensure NAT gateway with specified parameters exists and call create if it does not """
-    # Check allocation-id refers to existing EIP allocation
-    allocation_id = module.params.get('allocation_id')
-    try:
-        ec2_client.describe_addresses(AllocationIds=[module.params.get('allocation_id')])
-    except botocore.exceptions.ClientError:
-        module.fail_json(msg="allocation: %s does not exist." % allocation_id)
-    # Check subnet exists
-    subnet_id = module.params.get('subnet_id')
-    try:
-        ec2_client.describe_subnets(SubnetIds=[subnet_id])
-    except botocore.exceptions.ClientError:
-        module.fail_json(msg="subnet: %s does not exist." % subnet_id)
     try:
         gateway_status_list = get_nat_gateway_status_list(ec2_client=ec2_client, module=module)
         for gateway_status in gateway_status_list:
