@@ -192,6 +192,9 @@ def ensure_subnet_present(vpc_conn, vpc_id, cidr, az, tags, check_mode):
                 'changed': changed,
                 'subnet': {}
             }
+    else:
+        while not subnet_exists(vpc_conn, subnet.id):
+            time.sleep(0.1)
 
     if tags != subnet.tags:
         ensure_tags(vpc_conn, subnet.id, tags, False, check_mode)
